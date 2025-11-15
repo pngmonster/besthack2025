@@ -4,7 +4,6 @@ class AddressSearch {
         this.addressInput = document.getElementById('addressInput');
         this.outputAddress = document.getElementById('outputAddress');
         this.outputCoordinates = document.getElementById('outputCoordinates');
-        this.marker = document.getElementById('marker');
 
         this.init();
     }
@@ -30,12 +29,11 @@ class AddressSearch {
         this.clearOutput();
 
         try {
-            // Временная заглушка для демонстрации
-            const result = await this.mockSearch(address);
+            // Здесь будет вызов к Python бекенду
+            const result = await this.searchAddress(address);
 
             if (result) {
                 this.updateOutput(result);
-                this.showMarker(result.coordinates);
                 this.showMessage('Адрес успешно найден', 'success');
             } else {
                 this.showMessage('Адрес не найден', 'error');
@@ -48,21 +46,28 @@ class AddressSearch {
         }
     }
 
-    // Временная функция-заглушка
-    async mockSearch(address) {
-        // Имитация задержки сети
-        await new Promise(resolve => setTimeout(resolve, 1000));
+    // Функция для вызова Python бекенда
+    async searchAddress(address) {
+        try {
+            const response = await fetch('/api/search', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ address: address })
+            });
 
-        // Для демонстрации возвращаем тестовые данные
-        return {
-            address: `г. Москва, ул. Тверская, д. 7 (по запросу: "${address}")`,
-            coordinates: {
-                lat: 55.7602,
-                lng: 37.6085
-            },
-            formattedAddress: `г. Москва, ул. Тверская, дом 7`,
-            formattedCoordinates: `55.7602, 37.6085`
-        };
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            return data;
+
+        } catch (error) {
+            console.error('API call failed:', error);
+            throw error;
+        }
     }
 
     updateOutput(result) {
@@ -74,14 +79,6 @@ class AddressSearch {
     clearOutput() {
         this.outputAddress.textContent = '—';
         this.outputCoordinates.textContent = '—';
-        this.marker.classList.add('hidden');
-    }
-
-    showMarker(coordinates) {
-        this.marker.classList.remove('hidden');
-
-        // Здесь будет логика для реальной карты
-        console.log('Показываем маркер на координатах:', coordinates);
     }
 
     setLoading(loading) {
@@ -95,18 +92,15 @@ class AddressSearch {
     }
 
     showMessage(message, type) {
-        // Удаляем предыдущие уведомления
         const existingNotification = document.querySelector('.notification');
         if (existingNotification) {
             existingNotification.remove();
         }
 
-        // Создаем уведомление
         const notification = document.createElement('div');
         notification.className = `notification ${type}`;
         notification.textContent = message;
 
-        // Стили для уведомления
         notification.style.cssText = `
             position: fixed;
             bottom: 20px;
@@ -126,12 +120,10 @@ class AddressSearch {
 
         document.body.appendChild(notification);
 
-        // Анимация появления
         setTimeout(() => {
             notification.style.transform = 'translateX(-50%) translateY(0)';
         }, 100);
 
-        // Автоматическое скрытие
         setTimeout(() => {
             notification.style.transform = 'translateX(-50%) translateY(100%)';
             setTimeout(() => {
