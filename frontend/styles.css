@@ -1,0 +1,356 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    --primary: #000000;
+    --secondary: #666666;
+    --background: #ffffff;
+    --surface: #f8f8f8;
+    --border: #e0e0e0;
+    --accent: #0066ff;
+    --radius: 8px;
+    --transition: all 0.2s ease;
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    background: var(--background);
+    color: var(--primary);
+    line-height: 1.5;
+    font-weight: 400;
+}
+
+.app {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Header */
+.header {
+    border-bottom: 1px solid var(--border);
+    padding: 1.5rem 1rem;
+    background: var(--background);
+}
+
+.team-logo {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    max-width: 180px;
+    margin: 0 auto;
+    margin-top: 30px;
+}
+
+.logo-icon {
+    font-size: 2rem;
+    width: 150px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--surface);
+    border-radius: var(--radius);
+}
+
+.team-name {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--primary);
+    margin-bottom: 0.25rem;
+}
+
+.team-tagline {
+    font-size: 0.9rem;
+    color: var(--secondary);
+    font-weight: 400;
+}
+
+/* Main Content */
+.main {
+    flex: 1;
+    padding: 2rem 1rem;
+    max-width: 1200px;
+    margin: 0 auto;
+    width: 100%;
+}
+
+/* Search Container */
+.search-container {
+    max-width: 600px;
+    margin: 0 auto 3rem;
+}
+
+.input-label {
+    display: block;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--primary);
+    margin-bottom: 0.5rem;
+}
+
+.input-section {
+    margin-bottom: 1.5rem;
+}
+
+.search-box {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+}
+
+.search-input {
+    flex: 1;
+    padding: 0.875rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--background);
+    color: var(--primary);
+    font-size: 0.95rem;
+    transition: var(--transition);
+    font-family: inherit;
+    min-width: 100px;
+    width: 100%;
+}
+
+.search-button {
+    padding: 0.875rem 1.5rem;
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: var(--radius);
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition);
+    position: relative;
+    min-width: 100px;
+    font-family: inherit;
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent);
+}
+
+.search-input::placeholder {
+    color: var(--secondary);
+    font-weight: 400;
+}
+
+.search-button:hover {
+    background: var(--secondary);
+    transform: translateY(-1px);
+}
+
+.search-button:active {
+    transform: translateY(0);
+}
+
+.search-button.loading .button-text {
+    opacity: 0;
+}
+
+.search-button.loading .loading-spinner {
+    opacity: 1;
+}
+
+.loading-spinner {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 18px;
+    height: 18px;
+    border: 2px solid transparent;
+    border-top: 2px solid white;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    opacity: 0;
+}
+
+@keyframes spin {
+    0% {
+        transform: translate(-50%, -50%) rotate(0deg);
+    }
+
+    100% {
+        transform: translate(-50%, -50%) rotate(360deg);
+    }
+}
+
+/* Output Section */
+.output-section {
+    margin-top: 1.5rem;
+}
+
+.output-box {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    padding: 1.25rem;
+}
+
+.output-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.output-field {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+}
+
+.field-label {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--secondary);
+    min-width: 80px;
+    flex-shrink: 0;
+}
+
+.field-value {
+    font-size: 0.9rem;
+    color: var(--primary);
+    font-family: 'Monaco', 'Consolas', monospace;
+    word-break: break-word;
+    flex: 1;
+}
+
+/* Map Section */
+.map-container {
+    position: relative;
+    border-radius: var(--radius);
+    overflow: hidden;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    height: 500px;
+}
+
+.map {
+    width: 100%;
+    height: 100%;
+    background: var(--surface);
+    position: relative;
+}
+
+.map-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--secondary);
+}
+
+.placeholder-content {
+    text-align: center;
+}
+
+.placeholder-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+.placeholder-content p {
+    font-size: 0.9rem;
+    color: var(--secondary);
+}
+
+.map-marker {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -100%);
+    z-index: 100;
+}
+
+.marker-pin {
+    width: 24px;
+    height: 24px;
+    background: var(--accent);
+    border: 3px solid white;
+    border-radius: 50%;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.hidden {
+    display: none;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+    .header {
+        padding: 1rem;
+    }
+
+    .team-name {
+        font-size: 1.25rem;
+    }
+
+    .team-tagline {
+        font-size: 0.8rem;
+    }
+
+    .main {
+        padding: 1.5rem 1rem;
+    }
+
+    .search-container {
+        margin-bottom: 2rem;
+    }
+
+    .search-box {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .search-button {
+        width: 100%;
+    }
+
+    .output-field {
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .field-label {
+        min-width: auto;
+    }
+
+    .map-container {
+        height: 400px;
+    }
+}
+
+@media (max-width: 480px) {
+    .main {
+        padding: 1rem;
+    }
+
+    .map-container {
+        height: 300px;
+    }
+
+    .search-input {
+        padding: 0.75rem;
+    }
+
+    .placeholder-icon {
+        font-size: 2rem;
+    }
+
+    .placeholder-content p {
+        font-size: 0.8rem;
+    }
+
+    .output-box {
+        padding: 1rem;
+    }
+}

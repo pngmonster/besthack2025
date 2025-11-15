@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GeoFinder | Поиск адресов</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <div class="app">
+        <header class="header">
+            <div class="team-logo">
+                <div class="team-info">
+                </div>
+                <img class="logo-icon" src="logo.jpg">
+            </div>
+        </header>
+
+        <main class="main">
+            <div class="search-container">
+                <div class="input-section">
+                    <label for="addressInput" class="input-label">Адрес для поиска</label>
+                    <div class="search-box">
+                        <input type="text" id="addressInput" class="search-input" placeholder="Введите адрес"
+                            autocomplete="off">
+                        <button id="searchBtn" class="search-button">
+                            <span class="button-text">Найти</span>
+                            <div class="loading-spinner"></div>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="output-section">
+                    <label class="input-label">Результат поиска</label>
+                    <div class="output-box">
+                        <div class="output-content">
+                            <div class="output-field">
+                                <span class="field-label">Адрес:</span>
+                                <span id="outputAddress" class="field-value">—</span>
+                            </div>
+                            <div class="output-field">
+                                <span class="field-label">Координаты:</span>
+                                <span id="outputCoordinates" class="field-value">—</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="map-container">
+                <div id="map" class="map">
+                    <div class="map-placeholder">
+                        <div class="placeholder-content">
+                            <div class="placeholder-icon">🗺️</div>
+                            <p>Карта появится здесь после поиска</p>
+                        </div>
+                    </div>
+                </div>
+                <div id="marker" class="map-marker hidden">
+                    <div class="marker-pin"></div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Место для будущей интеграции с бекендом -->
+        <script>
+            // Этот блок будет заменен на реальные API вызовы к бекенду
+        </script>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+
+</html>
