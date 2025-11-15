@@ -42,7 +42,6 @@ body {
     gap: 1rem;
     max-width: 180px;
     margin: 0 auto;
-    margin-top: 30px;
 }
 
 .logo-icon {
@@ -192,6 +191,7 @@ body {
     border-radius: var(--radius);
     background: var(--surface);
     padding: 1.25rem;
+    margin-bottom: 15px;
 }
 
 .output-content {
