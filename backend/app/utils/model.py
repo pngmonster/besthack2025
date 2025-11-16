@@ -127,8 +127,8 @@ def search_address_single_levenshtein(csv_path, query, top_n=3):
         street_query_norm,
         street_index,
         scorer=fuzz.ratio,  # Чистое расстояние Левенштейна
-        limit=top_n * 5,    # Берем больше кандидатов для точной фильтрации
-        score_cutoff=30     # Минимальный порог схожести
+        limit=top_n * 5,
+        score_cutoff=30
     )
 
     results = []
@@ -143,40 +143,23 @@ def search_address_single_levenshtein(csv_path, query, top_n=3):
             row['house']
         )
 
-        # Формируем полный адрес из оригинальных данных БЕЗ ИЗМЕНЕНИЯ РЕГИСТРА
-        full_address_parts = []
-
-        # Город (всегда Москва)
-        full_address_parts.append("Москва")
-
-        # Улица (оригинальное значение из DataFrame как есть)
-        full_address_parts.append(str(row['street']))
-
-        # Дом (оригинальное значение из DataFrame как есть)
-        full_address_parts.append(str(row['house']))
-
-        # Корпус/строение (оригинальные значения из DataFrame как есть)
-        building = row.get('building', '')
-        if building and not pd.isna(building) and str(building) != 'nan' and str(building) != '':
-            full_address_parts.append(str(building))
-
-        structure = row.get('structure', '')
-        if structure and not pd.isna(structure) and str(structure) != 'nan' and str(structure) != '':
-            full_address_parts.append(str(structure))
-
-        # Собираем полный адрес в оригильном формате
-        full_address = ', '.join(full_address_parts[:2]) + ', ' + ' '.join(full_address_parts[2:])
-
+        # --- ВАЖНО ---
+        # Возвращаем street и number полностью в ОРИГИНАЛЬНОМ виде, без любых изменений
         results.append({
             "locality": "Москва",
-            "street": str(row['street']),  # Оригинальное название улицы как в DataFrame
-            "number": str(row['house']),   # Оригинальный номер дома как в DataFrame
+
+            # ОРИГИНАЛ street из DataFrame
+            "street": row['street'] if pd.notna(row['street']) else "",
+
+            # ОРИГИНАЛ number/house из DataFrame
+            "number": row['house'] if pd.notna(row['house']) else "",
+
             "lon": float(row['@lon']),
             "lat": float(row['@lat']),
             "score": final_score,
         })
 
-    # Сортируем по убыванию общего score
+    # Финальная сортировка
     results.sort(key=lambda x: x['score'], reverse=True)
     results = results[:top_n]
 
