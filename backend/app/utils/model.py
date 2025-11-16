@@ -1,3 +1,4 @@
+
 import pandas as pd
 import numpy as np
 import re
@@ -143,20 +144,22 @@ def search_address_single_levenshtein(csv_path, query, top_n=3):
             row['house']
         )
 
-        # Формируем полный адрес
-        street_name = normalize_street_name_cached(row['street'])
-        full_address = f"Москва, {street_name}, {row['house']}"
+        # Формируем полный адрес БЕЗ изменения порядка слов из исходного DataFrame
+        full_address_parts = ["Москва", row['street'], str(row['house'])]
 
         building = row.get('building', '')
         structure = row.get('structure', '')
+
         if building and not pd.isna(building) and str(building) != 'nan':
-            full_address += f" корп {building}"
+            full_address_parts.append(str(building))
         if structure and not pd.isna(structure) and str(structure) != 'nan':
-            full_address += f" стр {structure}"
+            full_address_parts.append(str(structure))
+
+        full_address = ', '.join(full_address_parts[:2]) + ', ' + ' '.join(full_address_parts[2:])
 
         results.append({
             "locality": "Москва",
-            "street": street_name,
+            "street": row['street'],  # Оригинальное название улицы из DataFrame
             "number": row['house'],
             "lon": row['@lon'],
             "lat": row['@lat'],

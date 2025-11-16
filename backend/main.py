@@ -18,7 +18,7 @@ app = FastAPI(
     version="0.0.1",
 )
 
-# app.add_middleware(LoggingMiddleware)
+app.add_middleware(LoggingMiddleware)
 if configs.BACKEND_CORS_ORIGINS:
     app.add_middleware(
         CORSMiddleware,
