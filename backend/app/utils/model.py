@@ -56,80 +56,114 @@ def preprocess_dataframe(df):
 
     return df, street_index
 
-def search_address_single_fast(csv_path, query, top_n=3):
+def calculate_levenshtein_score(street_query, street_candidate, house_query, house_candidate):
     """
-    Оптимизированная версия поиска адресов
+    Расчет общего score на основе расстояния Левенштейна
+    """
+    # Нормализуем дома для сравнения
+    house_candidate_str = str(house_candidate).lower().strip() if not pd.isna(house_candidate) else ""
+    house_query_str = house_query.lower().strip() if house_query else ""
+
+    # Score для улицы (расстояние Левенштейна)
+    if street_query and street_candidate:
+        # Используем normalized Levenshtein similarity (0-100)
+        street_similarity = fuzz.ratio(street_query, street_candidate, processor=None)
+        street_score = street_similarity / 100  # Приводим к 0-1
+    else:
+        street_score = 0.0
+
+    # Score для дома
+    if house_query_str and house_candidate_str:
+        if house_query_str == house_candidate_str:
+            house_score = 1.0
+        else:
+            # Для дома тоже используем Левенштейн, но с меньшим весом
+            house_similarity = fuzz.ratio(house_query_str, house_candidate_str, processor=None)
+            house_score = house_similarity / 100
+    else:
+        house_score = 0.5 if not house_query_str else 0.0  # Если дома нет в запросе, нейтральный score
+
+    # Комбинируем scores (можно настроить веса)
+    if house_query_str:  # Если дом указан в запросе
+        final_score = 0.7 * street_score + 0.3 * house_score
+    else:  # Если дом не указан
+        final_score = street_score
+
+    return final_score
+
+def search_address_single_levenshtein(csv_path, query, top_n=3):
+    """
+    Поиск адресов с использованием расстояния Левенштейна
     """
     # Загружаем и предобрабатываем данные один раз
-    if not hasattr(search_address_single_fast, '_df_cache'):
+    if not hasattr(search_address_single_levenshtein, '_df_cache'):
         df = pd.read_csv(csv_path, sep=';')
-        search_address_single_fast._df_cache, search_address_single_fast._street_index = preprocess_dataframe(df)
+        search_address_single_levenshtein._df_cache, search_address_single_levenshtein._street_index = preprocess_dataframe(df)
 
-    df = search_address_single_fast._df_cache
-    street_index = search_address_single_fast._street_index
+    df = search_address_single_levenshtein._df_cache
+    street_index = search_address_single_levenshtein._street_index
 
     # Быстрая нормализация запроса
     query_norm = query.strip()
     if not query_norm.lower().startswith("москва"):
         query_norm = "Москва, " + query_norm
 
-    # Быстрое извлечение номера дома
-    house_match = re.search(r'\d+[а-яА-ЯкК]*', query_norm)
+    # Извлекаем номер дома и улицу
+    house_match = re.search(r'\d+[а-яА-ЯкК/\-]*', query_norm)
     query_house = house_match.group(0) if house_match else ""
 
-    # Извлекаем улицу из запроса
-    street_query = re.sub(r'\d+[а-яА-ЯкК]*', '', query_norm)\
+    # Извлекаем улицу (убираем Москву и номер дома)
+    street_query = re.sub(r'\d+[а-яА-ЯкК/\-]*', '', query_norm)\
                       .replace("Москва,", "")\
+                      .replace("москва,", "")\
                       .strip()\
                       .lower()
 
-    # Используем rapidfuzz.process для быстрого поиска лучших совпадений
+    # Нормализуем запрос улицы
+    street_query_norm = normalize_street_name_cached(street_query).lower()
+
+    # Используем rapidfuzz.process с расстоянием Левенштейна
     matches = process.extract(
-        street_query,
+        street_query_norm,
         street_index,
-        scorer=fuzz.WRatio,
-        limit=top_n * 3,  # Берем больше для фильтрации по дому
-        score_cutoff=50   # Минимальный порог совпадения
+        scorer=fuzz.ratio,  # Чистое расстояние Левенштейна
+        limit=top_n * 5,    # Берем больше кандидатов для точной фильтрации
+        score_cutoff=30     # Минимальный порог схожести
     )
 
     results = []
-    for street_norm, score, idx in matches:
+    for street_norm, street_similarity, idx in matches:
         row = df.iloc[idx]
 
-        # Проверка номера дома (только если указан в запросе)
-        number_score = 1.0
-        if query_house:
-            house_str = str(row['house']).lower()
-            if query_house.lower() == house_str:
-                number_score = 1.0
-            elif query_house.lower() in house_str:
-                number_score = 0.8
-            else:
-                number_score = 0.3  # Штраф за несовпадение дома
-
-        street_score = score / 100
-        final_score = (street_score + number_score) / 2
+        # Рассчитываем общий score с учетом дома
+        final_score = calculate_levenshtein_score(
+            street_query_norm,
+            street_norm,
+            query_house,
+            row['house']
+        )
 
         # Формируем полный адрес
-        full_address = f"Москва, {normalize_street_name_cached(row['street'])}, {row['house']}"
+        street_name = normalize_street_name_cached(row['street'])
+        full_address = f"Москва, {street_name}, {row['house']}"
+
         building = row.get('building', '')
         structure = row.get('structure', '')
-
-        if building and not pd.isna(building):
-            full_address += f" {building}"
-        if structure and not pd.isna(structure):
-            full_address += f" {structure}"
+        if building and not pd.isna(building) and str(building) != 'nan':
+            full_address += f" корп {building}"
+        if structure and not pd.isna(structure) and str(structure) != 'nan':
+            full_address += f" стр {structure}"
 
         results.append({
             "locality": "Москва",
-            "street": normalize_street_name_cached(row['street']),
+            "street": street_name,
             "number": row['house'],
             "lon": row['@lon'],
             "lat": row['@lat'],
-            "score": final_score
+            "score": final_score,
         })
 
-    # Сортируем по убыванию score и берем top_n
+    # Сортируем по убыванию общего score
     results.sort(key=lambda x: x['score'], reverse=True)
     results = results[:top_n]
 
