@@ -5,6 +5,8 @@
 
 # Запуск
 ```
+git clone https://github.com/pngmonster/besthack2025
+cd besthack2025
 docker build -t backend ./backend
 docker-compose up --build
 ```
