@@ -533,12 +533,7 @@ body {
     }
 
     .search-box {
-        flex-direction: column;
         gap: 0.75rem;
-    }
-
-    .search-button {
-        width: 100%;
     }
 
     .output-field {
