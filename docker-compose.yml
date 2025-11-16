@@ -28,7 +28,7 @@ services:
     networks:
       - backend
     volumes:
-      - ./addresses_full.csv:/app/addresses_full.csv
+      - ./buildings_cleaned.csv:/app/buildings_cleaned.csv
 
   adminer:
     image: adminer

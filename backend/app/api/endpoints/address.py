@@ -12,7 +12,7 @@ router = APIRouter(prefix="/search", tags=["search"])
 @router.get("", response_model=SearchResponse)
 async def search(address: str):
     try:
-        res = search_address_single_levenshtein("addresses_full.csv", address, top_n=3)
+        res = search_address_single_levenshtein("buildings_cleaned.csv", address, top_n=3)
         return res
 
     except Exception as e:
