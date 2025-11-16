@@ -1,33 +1,46 @@
-import json
-from sentence_transformers import SentenceTransformer
-from tqdm import tqdm
+import pandas as pd
+from rapidfuzz import process, fuzz
 
-# ==== Настройки ====
-INPUT_FILE = "output.json"       # входной JSON
-OUTPUT_FILE = "output_with_emb.json"
-MODEL_NAME = "sentence-transformers/all-mpnet-base-v2"
-# ====================
+# Загружаем CSV с полной колонкой адресов
+df = pd.read_csv("addresses_full.csv", sep=';')
 
-# Загружаем данные
-with open(INPUT_FILE, "r", encoding="utf-8") as f:
-    items = json.load(f)
+# Функция для нормализации запроса
+def normalize_query(query):
+    query = query.strip()
+    if not query.lower().startswith("москва"):
+        query = "Москва, " + query
+    return query.lower()
 
-# Загружаем модель
-model = SentenceTransformer(MODEL_NAME)
+# Функция поиска топ-N совпадений
+def find_top_addresses(query, df, top_n=3):
+    query_norm = normalize_query(query)
 
-# Генерация эмбеддингов
-for item in tqdm(items, desc="Generating embeddings"):
-    # Формируем полный адрес
-    full_address = f"{item.get('localy','')} {item.get('street','')} {item.get('number','')}"
+    # Поиск топ-N совпадений
+    matches = process.extract(query_norm, df['full_address'].str.lower(), scorer=fuzz.WRatio, limit=top_n)
 
-    # Получаем эмбеддинг
-    embedding = model.encode(full_address, convert_to_numpy=True).tolist()
+    results = []
+    for match in matches:
+        addr_idx = match[2]
+        score = match[1]
+        row = df.iloc[addr_idx]
+        results.append({
+            "query": query,
+            "normalized_query": query_norm,
+            "best_match": row['full_address'],
+            "score": score,
+            "id": row['@id'],
+            "lat": row['@lat'],
+            "lon": row['@lon']
+        })
+    return results
 
-    # Добавляем в объект
-    item["embedding"] = embedding
+# Пример поиска
+queries = ["выборгская 24", "улица дурова 4", "крутицкий вал 26 с2"]
 
-# Сохраняем результат
-with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
-    json.dump(items, f, ensure_ascii=False, indent=2)
+all_results = []
+for q in queries:
+    all_results.extend(find_top_addresses(q, df, top_n=3))
 
-print(f"Эмбеддинги сохранены в {OUTPUT_FILE}")
+# Выводим результаты
+for r in all_results:
+    print(r)

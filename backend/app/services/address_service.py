@@ -5,6 +5,7 @@ from app.repository.address_repository import AddressRepository, get_address_rep
 from app.repository.chromadb_repository import ChromaRepository, get_chroma_repo
 from app.schema.address import AddressCreate, Address, SearchResponse, SearchObject
 import re
+from app.utils.model import search_address_single
 
 street_types = {
     "ул": "улица",
@@ -76,24 +77,9 @@ class AddressService:
             embedding.append(address.embedding)
         await self.chroma_repo.add(ids, texts, embedding)
 
-    async def search(self, search_name: str, n_results=5):
-        ids, distance = await self.chroma_repo.query(search_name, n_results)
-        idx = 0
-        objs = []
-        while idx<len(ids):
-            address = await self.address_repo.get_by_id(int(ids[idx]))
-            obj = SearchObject(
-                locality=address.localy,
-                street=address.street,
-                number=address.number,
-                lon=address.lon,
-                lat=address.lat,
-                score=compute_score(" ".join([address.localy, address.street, address.number]), search_name)
-            )
-            objs.append(obj)
-            idx += 1
-
-        return SearchResponse(searched_address=search_name, objects=objs)
+    async def search(self, search: str, n_results=5):
+        res = search_address_single("addresses_full.csv", search, top_n=3)
+        return res
 
 def get_address_service(
         address_repo: AddressRepository = Depends(get_address_repo),
