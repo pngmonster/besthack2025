@@ -38,7 +38,7 @@ def format_full_address(city, street, house, building='', structure=''):
         parts.append(structure)
     return ', '.join(parts[:2]) + ', ' + ' '.join(parts[2:])
 
-def search_address_single_fast(csv_path, query, top_n=3):
+def search_address_single(csv_path, query, top_n=3):
     df = pd.read_csv(csv_path, sep=';')
 
     # Нормализация запроса
