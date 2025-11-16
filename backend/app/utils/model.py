@@ -1,96 +1,138 @@
 import pandas as pd
 import numpy as np
 import re
-from rapidfuzz import fuzz
+from rapidfuzz import fuzz, process
+import functools
 
-# Словарь для замены сокращений
-street_types = {
-    r'\bул\.?\b': 'улица',
-    r'\bпер\.?\b': 'переулок',
-    r'\bпр-т\b': 'проспект',
-    r'\bб-р\b': 'бульвар',
-    r'\bш\b': 'шоссе'
-}
+# Кэшируем нормализацию
+@functools.lru_cache(maxsize=10000)
+def normalize_street_name_cached(street_name):
+    """Кэшированная версия нормализации названий улиц"""
+    if not street_name or pd.isna(street_name):
+        return ""
 
-def normalize_street_name(street_name):
-    name = street_name.lower().strip()
-    for abbr, full in street_types.items():
-        name = re.sub(abbr, full, name)
+    name = str(street_name).lower().strip()
+
+    # Быстрые замены через строковые методы
+    replacements = [
+        ('ул.', 'улица'), ('ул ', 'улица '), (' ул ', ' улица '),
+        ('пер.', 'переулок'), ('пер ', 'переулок '), (' пер ', ' переулок '),
+        ('пр-т', 'проспект'), ('пр т', 'проспект'), (' пр-т ', ' проспект '),
+        ('б-р', 'бульвар'), ('б р', 'бульвар'), (' б-р ', ' бульвар '),
+        (' ш ', ' шоссе ')
+    ]
+
+    for old, new in replacements:
+        name = name.replace(old, new)
+
     tokens = name.split()
     street_type = None
-    for t in ['улица', 'переулок', 'проспект', 'бульвар', 'шоссе']:
-        if t in tokens:
-            street_type = t
-            tokens.remove(t)
+
+    # Быстрая проверка типов улиц
+    street_types_set = {'улица', 'переулок', 'проспект', 'бульвар', 'шоссе'}
+    for i, token in enumerate(tokens):
+        if token in street_types_set:
+            street_type = token
+            tokens.pop(i)
             break
+
     if street_type:
         normalized = ' '.join(tokens).capitalize() + ' ' + street_type
     else:
         normalized = ' '.join(tokens).capitalize()
+
     return normalized
 
-def format_full_address(city, street, house, building='', structure=''):
-    street_norm = normalize_street_name(street)
-    parts = [city, street_norm, house]
-    if building:
-        parts.append(building)
-    if structure:
-        parts.append(structure)
-    return ', '.join(parts[:2]) + ', ' + ' '.join(parts[2:])
+def preprocess_dataframe(df):
+    """Предобработка DataFrame для ускорения поиска"""
+    df = df.copy()
 
-def search_address_single(csv_path, query, top_n=3):
-    df = pd.read_csv(csv_path, sep=';')
+    # Предварительно нормализуем все улицы
+    if 'street_normalized' not in df.columns:
+        df['street_normalized'] = df['street'].apply(normalize_street_name_cached).str.lower().str.strip()
 
-    # Нормализация запроса
+    # Создаем поисковый индекс
+    street_index = df['street_normalized'].tolist()
+
+    return df, street_index
+
+def search_address_single_fast(csv_path, query, top_n=3):
+    """
+    Оптимизированная версия поиска адресов
+    """
+    # Загружаем и предобрабатываем данные один раз
+    if not hasattr(search_address_single_fast, '_df_cache'):
+        df = pd.read_csv(csv_path, sep=';')
+        search_address_single_fast._df_cache, search_address_single_fast._street_index = preprocess_dataframe(df)
+
+    df = search_address_single_fast._df_cache
+    street_index = search_address_single_fast._street_index
+
+    # Быстрая нормализация запроса
     query_norm = query.strip()
     if not query_norm.lower().startswith("москва"):
         query_norm = "Москва, " + query_norm
 
-    # Выделяем номер дома из запроса
+    # Быстрое извлечение номера дома
     house_match = re.search(r'\d+[а-яА-ЯкК]*', query_norm)
     query_house = house_match.group(0) if house_match else ""
-    street_query = re.sub(r'\d+[а-яА-ЯкК]*', '', query_norm).replace("Москва,", "").strip().lower()
 
-    # Векторизация улиц
-    streets = df['street'].apply(normalize_street_name).str.lower().str.strip().to_numpy()
-    query_street_np = np.array([street_query] * len(streets))
+    # Извлекаем улицу из запроса
+    street_query = re.sub(r'\d+[а-яА-ЯкК]*', '', query_norm)\
+                      .replace("Москва,", "")\
+                      .strip()\
+                      .lower()
 
-    # Векторизованный fuzzy matching через numpy
-    vectorized_score = np.vectorize(fuzz.WRatio)(query_street_np, streets)
-
-    # Выбор top-N индексов по убыванию
-    top_idx = np.argsort(vectorized_score)[::-1][:top_n]
+    # Используем rapidfuzz.process для быстрого поиска лучших совпадений
+    matches = process.extract(
+        street_query,
+        street_index,
+        scorer=fuzz.WRatio,
+        limit=top_n * 3,  # Берем больше для фильтрации по дому
+        score_cutoff=50   # Минимальный порог совпадения
+    )
 
     results = []
-    for idx in top_idx:
+    for street_norm, score, idx in matches:
         row = df.iloc[idx]
-        street_score = vectorized_score[idx] / 100
-        # Проверка номера дома
+
+        # Проверка номера дома (только если указан в запросе)
         number_score = 1.0
         if query_house:
-            if query_house.lower() in str(row['house']).lower():
+            house_str = str(row['house']).lower()
+            if query_house.lower() == house_str:
                 number_score = 1.0
+            elif query_house.lower() in house_str:
+                number_score = 0.8
             else:
-                number_score = 0.5
+                number_score = 0.3  # Штраф за несовпадение дома
+
+        street_score = score / 100
         final_score = (street_score + number_score) / 2
 
-        full_address = format_full_address(
-            city="Москва",
-            street=row['street'],
-            house=row['house'],
-            building=row.get('building', ''),
-            structure=row.get('structure', '')
-        )
+        # Формируем полный адрес
+        full_address = f"Москва, {normalize_street_name_cached(row['street'])}, {row['house']}"
+        building = row.get('building', '')
+        structure = row.get('structure', '')
+
+        if building and not pd.isna(building):
+            full_address += f" {building}"
+        if structure and not pd.isna(structure):
+            full_address += f" {structure}"
 
         results.append({
             "locality": "Москва",
-            "street": normalize_street_name(row['street']),
+            "street": normalize_street_name_cached(row['street']),
             "number": row['house'],
             "full_address": full_address,
             "lon": row['@lon'],
             "lat": row['@lat'],
             "score": final_score
         })
+
+    # Сортируем по убыванию score и берем top_n
+    results.sort(key=lambda x: x['score'], reverse=True)
+    results = results[:top_n]
 
     return {
         "searched_address": query,
