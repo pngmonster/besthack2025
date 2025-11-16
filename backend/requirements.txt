@@ -6,3 +6,4 @@ chromadb
 structlog
 asyncpg
 python-Levenshtein
+sentence_transformers
