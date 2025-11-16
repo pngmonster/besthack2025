@@ -124,7 +124,6 @@ def search_address_single_fast(csv_path, query, top_n=3):
             "locality": "Москва",
             "street": normalize_street_name_cached(row['street']),
             "number": row['house'],
-            "full_address": full_address,
             "lon": row['@lon'],
             "lat": row['@lat'],
             "score": final_score

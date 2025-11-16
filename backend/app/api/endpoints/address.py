@@ -3,7 +3,7 @@ from fastapi.responses import Response, JSONResponse
 from fastapi.exceptions import HTTPException
 from typing import List
 import json
-from app.utils.model import search_address_single
+from app.utils.model import search_address_single_fast
 from app.schema.address import AddressCreate, SearchResponse
 
 
@@ -12,7 +12,7 @@ router = APIRouter(prefix="/search", tags=["search"])
 @router.get("", response_model=SearchResponse)
 async def search(address: str):
     try:
-        res = search_address_single("addresses_full.csv", address, top_n=3)
+        res = search_address_single_fast("addresses_full.csv", address, top_n=3)
         return res
 
     except Exception as e:
