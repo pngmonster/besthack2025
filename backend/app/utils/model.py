@@ -13,9 +13,7 @@ street_types = {
 }
 
 def normalize_street_name(street_name):
-    """
-    Нормализует название улицы: заменяет сокращения и приводит к нормативному порядку слов.
-    """
+    """Нормализует название улицы: заменяет сокращения и приводит к нормативному порядку слов."""
     name = street_name.lower().strip()
     for abbr, full in street_types.items():
         name = re.sub(abbr, full, name)
@@ -33,10 +31,7 @@ def normalize_street_name(street_name):
     return normalized
 
 def format_full_address(city, street, house, building='', structure=''):
-    """
-    Формирует полный адрес в формате:
-    {город}, {улица}, {номер дома} {корпус} {строение}
-    """
+    """Формирует полный адрес в формате: {город}, {улица}, {номер дома} {корпус} {строение}"""
     street_norm = normalize_street_name(street)
     parts = [city, street_norm, house]
     if building:
@@ -45,12 +40,12 @@ def format_full_address(city, street, house, building='', structure=''):
         parts.append(structure)
     return ', '.join(parts[:2]) + ', ' + ' '.join(parts[2:])
 
-def search_address_single(df, query, top_n=5):
+def search_address_for_route(df, query, top_n=5):
     """
-    Быстрый и безопасный поиск адреса с учётом опечаток и нормализации.
-    Возвращает Python-объект (словарь) для прямого использования.
+    Поиск топ-N совпадений адреса.
+    Возвращает Python-объект (dict), безопасный для расчёта маршрута.
     """
-    # Нормализация запроса
+    # Нормализуем запрос
     query_norm = query.strip()
     if not query_norm.lower().startswith("москва"):
         query_norm = "Москва, " + query_norm
@@ -62,16 +57,16 @@ def search_address_single(df, query, top_n=5):
     # Выделяем улицу
     street_query = re.sub(r'\d+[а-яА-ЯкК]*', '', query_norm).replace("Москва,", "").strip().lower()
 
-    # Нормализация всех улиц в DataFrame
+    # Нормализация улиц в DataFrame
     df['street_norm'] = df['street'].apply(normalize_street_name).str.lower().str.strip()
 
-    # Фильтр кандидатов по префиксу для ускорения поиска
+    # Быстрый фильтр кандидатов по префиксу
     prefix = street_query[:3]
     candidates = df[df['street_norm'].str.contains(prefix)]
     if len(candidates) < 50:
         candidates = df
 
-    # Векторизованный fuzzy score
+    # Векторизация fuzzy score через numpy
     streets_np = candidates['street_norm'].to_numpy()
     query_np = np.array([street_query] * len(streets_np))
     vectorized_score = np.vectorize(fuzz.WRatio)(query_np, streets_np)
@@ -111,7 +106,7 @@ def search_address_single(df, query, top_n=5):
             "score": final_score
         })
 
-    # Возвращаем Python-словарь, безопасный для прямого доступа к объектам
+    # Возвращаем Python-словарь, безопасный для расчёта маршрута
     return {
         "searched_address": query,
         "objects": results
