@@ -5,29 +5,40 @@ from tqdm import tqdm
 # ==== Настройки ====
 INPUT_FILE = "output.json"
 API_URL = "http://localhost:8000/api/search/save"
+BATCH_SIZE = 500  # размер батча, можно менять
 # ====================
 
 # Загружаем JSON
 with open(INPUT_FILE, "r", encoding="utf-8") as f:
     items = json.load(f)
 
-# Отправляем каждый объект отдельно
-for i, item in enumerate(tqdm(items, desc="Sending items")):
-    if not item["localy"]: item["localy"]="Москва"
+total = len(items)
+print(f"Всего объектов: {total}")
 
+# Функция отправки одного батча
+def send_batch(batch, batch_id):
     try:
-        response = requests.post(
+        resp = requests.post(
             API_URL,
             headers={
                 "accept": "application/json",
                 "Content-Type": "application/json"
             },
-            json=[item]  # оборачиваем в список, т.к. API ожидает массив
+            json=batch
         )
-        response.raise_for_status()
+        resp.raise_for_status()
     except requests.RequestException as e:
-        print(f"\nError sending item {i}: {e}")
-    else:
-        pass  # можно добавить: print(f"Item {i} sent, status {response.status_code}")
+        print(f"\nОшибка при отправке батча {batch_id}: {e}")
 
-print("Все объекты отправлены!")
+# Разбиваем на батчи и отправляем
+for i in tqdm(range(0, total, BATCH_SIZE), desc="Отправка батчей"):
+    batch = items[i:i + BATCH_SIZE]
+
+    # гарантируем, что localy есть
+    for item in batch:
+        if not item.get("localy"):
+            item["localy"] = "Москва"
+
+    send_batch(batch, i // BATCH_SIZE)
+
+print("Готово! Все объекты отправлены батчами.")
