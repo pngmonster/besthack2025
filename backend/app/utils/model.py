@@ -1,4 +1,3 @@
-
 import pandas as pd
 import numpy as np
 import re
@@ -144,25 +143,37 @@ def search_address_single_levenshtein(csv_path, query, top_n=3):
             row['house']
         )
 
-        # Формируем полный адрес БЕЗ изменения порядка слов из исходного DataFrame
-        full_address_parts = ["Москва", row['street'], str(row['house'])]
+        # Формируем полный адрес из оригинальных данных
+        full_address_parts = []
 
+        # Город (всегда Москва)
+        full_address_parts.append("Москва")
+
+        # Улица (оригинальное значение из DataFrame)
+        full_address_parts.append(str(row['street']))
+
+        # Дом (оригинальное значение из DataFrame)
+        full_address_parts.append(str(row['house']))
+
+        # Корпус/строение (оригинальные значения из DataFrame)
         building = row.get('building', '')
-        structure = row.get('structure', '')
-
-        if building and not pd.isna(building) and str(building) != 'nan':
+        if building and not pd.isna(building) and str(building) != 'nan' and str(building) != '':
             full_address_parts.append(str(building))
-        if structure and not pd.isna(structure) and str(structure) != 'nan':
+
+        structure = row.get('structure', '')
+        if structure and not pd.isna(structure) and str(structure) != 'nan' and str(structure) != '':
             full_address_parts.append(str(structure))
 
+        # Собираем полный адрес в оригильном формате
         full_address = ', '.join(full_address_parts[:2]) + ', ' + ' '.join(full_address_parts[2:])
 
         results.append({
             "locality": "Москва",
-            "street": row['street'],  # Оригинальное название улицы из DataFrame
-            "number": row['house'],
-            "lon": row['@lon'],
-            "lat": row['@lat'],
+            "street": str(row['street']),  # Оригинальное название улицы
+            "number": str(row['house']),   # Оригинальный номер дома
+            "full_address": full_address,  # Адрес из оригильных данных
+            "lon": float(row['@lon']),
+            "lat": float(row['@lat']),
             "score": final_score,
         })
 
