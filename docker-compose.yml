@@ -25,11 +25,10 @@ services:
       DB: db
     ports:
       - "8000:8000"
-    depends_on:
-      postgres:
-        condition: service_healthy
     networks:
       - backend
+    volumes:
+      - ./addresses_full.csv:/app/addresses_full.csv
 
   adminer:
     image: adminer
@@ -46,13 +45,12 @@ services:
     image: ghcr.io/chroma-core/chroma:latest
     container_name: chroma
     ports:
-      - "8001:8001"   # API порт
+      - "8001:8001" # API порт
     volumes:
-      - ./chroma_data:/chromadb  # сохраняем данные на хост
+      - ./chroma_data:/chromadb # сохраняем данные на хост
     environment:
-      - CHROMA_DB_IMPL=duckdb+parquet  # durable storage
+      - CHROMA_DB_IMPL=duckdb+parquet # durable storage
       - CHROMA_SERVER_HTTP_PORT=8001
-
 
 networks:
   backend:
