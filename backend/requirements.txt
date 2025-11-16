@@ -2,9 +2,6 @@ fastapi
 sqlalchemy
 pydantic
 pydantic_settings
-chromadb
 structlog
-asyncpg
 python-Levenshtein
-sentence_transformers
 rapidfuzz
