@@ -79,7 +79,7 @@ body {
 /* Search Container */
 .search-container {
     max-width: 600px;
-    margin: 0 auto 3rem;
+    margin: 0 auto 15px;
 }
 
 .input-label {
@@ -169,6 +169,18 @@ body {
     border-radius: 50%;
     animation: spin 1s linear infinite;
     opacity: 0;
+}
+
+.map-container {
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    overflow: hidden;
+    height: 400px;
+}
+
+#map {
+    height: 100%;
+    width: 100%;
 }
 
 @keyframes spin {
@@ -529,7 +541,7 @@ body {
     }
 
     .search-container {
-        margin-bottom: 2rem;
+        margin-bottom: 1.5rem;
     }
 
     .search-box {
@@ -544,19 +556,11 @@ body {
     .field-label {
         min-width: auto;
     }
-
-    .map-container {
-        height: 400px;
-    }
 }
 
 @media (max-width: 480px) {
     .main {
         padding: 1rem;
-    }
-
-    .map-container {
-        height: 300px;
     }
 
     .search-input {

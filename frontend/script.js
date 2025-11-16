@@ -1,7 +1,55 @@
+// Глобальные переменные для карты
+let map;
+let markers = [];
+
+// Инициализация карты при загрузке страницы
+function initMap() {
+    map = L.map('map', {
+        attributionControl: false  // Полностью отключаем контроль атрибуции
+    }).setView([55.7558, 37.6173], 10);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+}
+
+// Очистка маркеров
+function clearMarkers() {
+    markers.forEach(marker => map.removeLayer(marker));
+    markers = [];
+}
+
+// Добавление маркеров на карту
+function addMarkersToMap(objects) {
+    clearMarkers();
+
+    if (!objects || objects.length === 0) return;
+
+    const bounds = [];
+
+    objects.forEach((object, index) => {
+        const marker = L.marker([object.lat, object.lon])
+            .addTo(map)
+            .bindPopup(`
+                <b>Результат ${index + 1}</b><br>
+                ${object.locality}, ${object.street} ${object.number}<br>
+                Score: ${Math.round(object.score * 100)}%
+            `);
+
+        markers.push(marker);
+        bounds.push([object.lat, object.lon]);
+    });
+
+    // Подгоняем карту чтобы показать все маркеры
+    if (bounds.length > 0) {
+        map.fitBounds(bounds);
+    }
+}
+
 document.addEventListener('DOMContentLoaded', function () {
     const searchBtn = document.getElementById('searchBtn');
     const addressInput = document.getElementById('addressInput');
     const outputSection = document.querySelector('.output-section');
+
+    initMap();
 
     searchBtn.addEventListener('click', function () {
         const address = addressInput.value.trim();
@@ -11,11 +59,10 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
 
-        // Показываем спиннер загрузки
         searchBtn.classList.add('loading');
 
-        // Имитируем запрос к бекенду (замените на реальный fetch)
-        simulateBackendRequest(address)
+        // Запрос к бекенду
+        searchAddress(address)
             .then(data => {
                 // Обновляем интерфейс с полученными данными
                 updateUI(data);
@@ -25,62 +72,38 @@ document.addEventListener('DOMContentLoaded', function () {
                 alert('Произошла ошибка при поиске адреса');
             })
             .finally(() => {
-                // Скрываем спиннер загрузки
                 searchBtn.classList.remove('loading');
             });
     });
 
-    // Функция для имитации запроса к бекенду
-    function simulateBackendRequest(address) {
-        return new Promise((resolve) => {
-            setTimeout(() => {
-                // Заглушка с тестовыми данными (3 объекта)
-                resolve({
-                    "searched_address": address,
-                    "objects": [
-                        {
-                            "locality": "Москва",
-                            "street": "Центральный проезд Хорошёвского Серебряного Бора",
-                            "number": "15",
-                            "lon": 37.5238,
-                            "lat": 55.7738,
-                            "score": 94
-                        },
-                        {
-                            "locality": "Москва",
-                            "street": "Ленинский проспект",
-                            "number": "42",
-                            "lon": 37.5738,
-                            "lat": 55.6938,
-                            "score": 87
-                        },
-                        {
-                            "locality": "Москва",
-                            "street": "Тверская улица",
-                            "number": "25",
-                            "lon": 37.6038,
-                            "lat": 55.7638,
-                            "score": 76
-                        }
-                    ]
-                });
-            }, 0); // Имитация задержки сети
+    async function searchAddress(address) {
+        const baseUrl = 'http://81.200.145.134:8000';
+        const url = `${baseUrl}/api/search?address=${encodeURIComponent(address)}`;
+
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+            }
         });
+
+        if (!response.ok) {
+            throw new Error(`Ошибка HTTP: ${response.status}`);
+        }
+
+        return await response.json();
     }
 
     // Функция для обновления интерфейса
     function updateUI(data) {
-        // Удаляем старые результаты (оставляем только заголовок)
         const outputLabel = outputSection.querySelector('.input-label');
         outputSection.innerHTML = '';
         outputSection.appendChild(outputLabel);
 
         if (data.objects && data.objects.length > 0) {
-            // Создаем контейнер для всех результатов
             const resultsContainer = document.createElement('div');
             resultsContainer.className = 'results-container';
 
-            // Создаем блок для каждого объекта
             data.objects.forEach((object, index) => {
                 const outputBox = createOutputBox(object, index + 1);
                 resultsContainer.appendChild(outputBox);
@@ -106,6 +129,10 @@ document.addEventListener('DOMContentLoaded', function () {
             `;
             outputSection.appendChild(noResultsBox);
         }
+
+        if (data.objects && data.objects.length > 0) {
+            addMarkersToMap(data.objects);
+        }
     }
 
     // Функция для создания блока результата
@@ -124,7 +151,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         outputBox.innerHTML = `
             <div class="result-number">${number}</div>
-            <div class="score-badge">${object.score}%</div>
+            <div class="score-badge">${Math.round(object.score * 100)}%</div>
             <div class="output-content">
                 <div class="output-field">
                     <span class="field-label">Адрес:</span>
