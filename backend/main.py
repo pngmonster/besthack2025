@@ -8,29 +8,14 @@ from fastapi.exceptions import RequestValidationError, HTTPException
 
 from app.api.routers import main_router
 from app.core.config import configs
-from app.core.middleware import LoggingMiddleware, parse_body
-from app.core.database import create_tables
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    # При запуске приложения
-    print("Starting application...")
 
-    # Создаем таблицы
-    await create_tables()
-    print("✅ Database tables created successfully!")
-
-    yield  # Здесь приложение работает
-
-    # При завершении приложения
-    print("Shutting down application...")
 
 logger = structlog.get_logger()
 app = FastAPI(
     title=configs.PROJECT_NAME,
     openapi_url=f"{configs.API}/openapi.json",
     version="0.0.1",
-    lifespan=lifespan
 )
 
 # app.add_middleware(LoggingMiddleware)

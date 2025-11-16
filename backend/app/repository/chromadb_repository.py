@@ -2,7 +2,6 @@ import chromadb
 from typing import List
 from fastapi import Depends
 from app.core.database import get_chroma
-from sentence_transformers import SentenceTransformer
 
 class ChromaRepository:
     def __init__(self, collection: chromadb.Collection):
