@@ -13,7 +13,6 @@ street_types = {
 }
 
 def normalize_street_name(street_name):
-    """Нормализует название улицы: заменяет сокращения и приводит к нормативному порядку слов."""
     name = street_name.lower().strip()
     for abbr, full in street_types.items():
         name = re.sub(abbr, full, name)
@@ -31,7 +30,6 @@ def normalize_street_name(street_name):
     return normalized
 
 def format_full_address(city, street, house, building='', structure=''):
-    """Формирует полный адрес в формате: {город}, {улица}, {номер дома} {корпус} {строение}"""
     street_norm = normalize_street_name(street)
     parts = [city, street_norm, house]
     if building:
@@ -40,44 +38,33 @@ def format_full_address(city, street, house, building='', structure=''):
         parts.append(structure)
     return ', '.join(parts[:2]) + ', ' + ' '.join(parts[2:])
 
-def search_address_single(df, query, top_n=5):
-    """
-    Поиск топ-N совпадений адреса.
-    Возвращает Python-объект (dict), безопасный для расчёта маршрута.
-    """
-    # Нормализуем запрос
+def search_address_single(csv_path, query, top_n=3):
+    df = pd.read_csv(csv_path, sep=';')
+
+    # Нормализация запроса
     query_norm = query.strip()
     if not query_norm.lower().startswith("москва"):
         query_norm = "Москва, " + query_norm
 
-    # Выделяем номер дома
+    # Выделяем номер дома из запроса
     house_match = re.search(r'\d+[а-яА-ЯкК]*', query_norm)
     query_house = house_match.group(0) if house_match else ""
-
-    # Выделяем улицу
     street_query = re.sub(r'\d+[а-яА-ЯкК]*', '', query_norm).replace("Москва,", "").strip().lower()
 
-    # Нормализация улиц в DataFrame
-    df['street_norm'] = df['street'].apply(normalize_street_name).str.lower().str.strip()
+    # Векторизация улиц
+    streets = df['street'].apply(normalize_street_name).str.lower().str.strip().to_numpy()
+    query_street_np = np.array([street_query] * len(streets))
 
-    # Быстрый фильтр кандидатов по префиксу
-    prefix = street_query[:3]
-    candidates = df[df['street_norm'].str.contains(prefix)]
-    if len(candidates) < 50:
-        candidates = df
+    # Векторизованный fuzzy matching через numpy
+    vectorized_score = np.vectorize(fuzz.WRatio)(query_street_np, streets)
 
-    # Векторизация fuzzy score через numpy
-    streets_np = candidates['street_norm'].to_numpy()
-    query_np = np.array([street_query] * len(streets_np))
-    vectorized_score = np.vectorize(fuzz.WRatio)(query_np, streets_np)
-
+    # Выбор top-N индексов по убыванию
     top_idx = np.argsort(vectorized_score)[::-1][:top_n]
+
     results = []
-
-    for i in top_idx:
-        row = candidates.iloc[i]
-        street_score = vectorized_score[i] / 100
-
+    for idx in top_idx:
+        row = df.iloc[idx]
+        street_score = vectorized_score[idx] / 100
         # Проверка номера дома
         number_score = 1.0
         if query_house:
@@ -85,7 +72,6 @@ def search_address_single(df, query, top_n=5):
                 number_score = 1.0
             else:
                 number_score = 0.5
-
         final_score = (street_score + number_score) / 2
 
         full_address = format_full_address(
@@ -106,7 +92,6 @@ def search_address_single(df, query, top_n=5):
             "score": final_score
         })
 
-    # Возвращаем Python-словарь, безопасный для расчёта маршрута
     return {
         "searched_address": query,
         "objects": results
