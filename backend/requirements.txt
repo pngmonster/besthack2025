@@ -7,3 +7,4 @@ structlog
 asyncpg
 python-Levenshtein
 sentence_transformers
+rapidfuzz
