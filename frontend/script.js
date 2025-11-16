@@ -1,141 +1,142 @@
-class AddressSearch {
-    constructor() {
-        this.searchBtn = document.getElementById('searchBtn');
-        this.addressInput = document.getElementById('addressInput');
-        this.outputAddress = document.getElementById('outputAddress');
-        this.outputCoordinates = document.getElementById('outputCoordinates');
+document.addEventListener('DOMContentLoaded', function () {
+    const searchBtn = document.getElementById('searchBtn');
+    const addressInput = document.getElementById('addressInput');
+    const outputSection = document.querySelector('.output-section');
 
-        this.init();
-    }
-
-    init() {
-        this.searchBtn.addEventListener('click', () => this.handleSearch());
-        this.addressInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                this.handleSearch();
-            }
-        });
-    }
-
-    async handleSearch() {
-        const address = this.addressInput.value.trim();
+    searchBtn.addEventListener('click', function () {
+        const address = addressInput.value.trim();
 
         if (!address) {
-            this.showMessage('Введите адрес для поиска', 'info');
+            alert('Пожалуйста, введите адрес для поиска');
             return;
         }
 
-        this.setLoading(true);
-        this.clearOutput();
+        // Показываем спиннер загрузки
+        searchBtn.classList.add('loading');
 
-        try {
-            // Здесь будет вызов к Python бекенду
-            const result = await this.searchAddress(address);
+        // Имитируем запрос к бекенду (замените на реальный fetch)
+        simulateBackendRequest(address)
+            .then(data => {
+                // Обновляем интерфейс с полученными данными
+                updateUI(data);
+            })
+            .catch(error => {
+                console.error('Ошибка:', error);
+                alert('Произошла ошибка при поиске адреса');
+            })
+            .finally(() => {
+                // Скрываем спиннер загрузки
+                searchBtn.classList.remove('loading');
+            });
+    });
 
-            if (result) {
-                this.updateOutput(result);
-                this.showMessage('Адрес успешно найден', 'success');
-            } else {
-                this.showMessage('Адрес не найден', 'error');
-            }
-        } catch (error) {
-            console.error('Search error:', error);
-            this.showMessage('Ошибка при поиске', 'error');
-        } finally {
-            this.setLoading(false);
-        }
+    // Функция для имитации запроса к бекенду
+    function simulateBackendRequest(address) {
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                // Заглушка с тестовыми данными (3 объекта)
+                resolve({
+                    "searched_address": address,
+                    "objects": [
+                        {
+                            "locality": "Москва",
+                            "street": "Центральный проезд Хорошёвского Серебряного Бора",
+                            "number": "15",
+                            "lon": 37.5238,
+                            "lat": 55.7738,
+                            "score": 94
+                        },
+                        {
+                            "locality": "Москва",
+                            "street": "Ленинский проспект",
+                            "number": "42",
+                            "lon": 37.5738,
+                            "lat": 55.6938,
+                            "score": 87
+                        },
+                        {
+                            "locality": "Москва",
+                            "street": "Тверская улица",
+                            "number": "25",
+                            "lon": 37.6038,
+                            "lat": 55.7638,
+                            "score": 76
+                        }
+                    ]
+                });
+            }, 0); // Имитация задержки сети
+        });
     }
 
-    // Функция для вызова Python бекенда
-    async searchAddress(address) {
-        try {
-            const response = await fetch('/api/search', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ address: address })
+    // Функция для обновления интерфейса
+    function updateUI(data) {
+        // Удаляем старые результаты (оставляем только заголовок)
+        const outputLabel = outputSection.querySelector('.input-label');
+        outputSection.innerHTML = '';
+        outputSection.appendChild(outputLabel);
+
+        if (data.objects && data.objects.length > 0) {
+            // Создаем контейнер для всех результатов
+            const resultsContainer = document.createElement('div');
+            resultsContainer.className = 'results-container';
+
+            // Создаем блок для каждого объекта
+            data.objects.forEach((object, index) => {
+                const outputBox = createOutputBox(object, index + 1);
+                resultsContainer.appendChild(outputBox);
             });
 
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            const data = await response.json();
-            return data;
-
-        } catch (error) {
-            console.error('API call failed:', error);
-            throw error;
-        }
-    }
-
-    updateOutput(result) {
-        this.outputAddress.textContent = result.formattedAddress || result.address;
-        this.outputCoordinates.textContent = result.formattedCoordinates ||
-            `${result.coordinates.lat}, ${result.coordinates.lng}`;
-    }
-
-    clearOutput() {
-        this.outputAddress.textContent = '—';
-        this.outputCoordinates.textContent = '—';
-    }
-
-    setLoading(loading) {
-        if (loading) {
-            this.searchBtn.classList.add('loading');
-            this.searchBtn.disabled = true;
+            outputSection.appendChild(resultsContainer);
         } else {
-            this.searchBtn.classList.remove('loading');
-            this.searchBtn.disabled = false;
+            // Если объекты не найдены
+            const noResultsBox = document.createElement('div');
+            noResultsBox.className = 'output-box';
+            noResultsBox.innerHTML = `
+                <div class="score-badge">0%</div>
+                <div class="output-content">
+                    <div class="output-field">
+                        <span class="field-label">Адрес:</span>
+                        <span class="field-value">Адрес не найден</span>
+                    </div>
+                    <div class="output-field">
+                        <span class="field-label">Координаты:</span>
+                        <span class="field-value">Нет координат</span>
+                    </div>
+                </div>
+            `;
+            outputSection.appendChild(noResultsBox);
         }
     }
 
-    showMessage(message, type) {
-        const existingNotification = document.querySelector('.notification');
-        if (existingNotification) {
-            existingNotification.remove();
-        }
+    // Функция для создания блока результата
+    function createOutputBox(object, number) {
+        const outputBox = document.createElement('div');
+        outputBox.className = 'output-box';
 
-        const notification = document.createElement('div');
-        notification.className = `notification ${type}`;
-        notification.textContent = message;
+        // Формируем адрес
+        const addressParts = [
+            object.locality,
+            object.street,
+            object.number
+        ].filter(part => part && part.trim() !== '');
 
-        notification.style.cssText = `
-            position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%) translateY(100%);
-            padding: 0.75rem 1.25rem;
-            border-radius: 6px;
-            color: white;
-            font-size: 0.9rem;
-            font-weight: 500;
-            z-index: 1000;
-            transition: transform 0.3s ease;
-            ${type === 'error' ? 'background: #dc2626;' :
-                type === 'success' ? 'background: #059669;' :
-                    'background: #4b5563;'}
+        const address = addressParts.join(', ');
+
+        outputBox.innerHTML = `
+            <div class="result-number">${number}</div>
+            <div class="score-badge">${object.score}%</div>
+            <div class="output-content">
+                <div class="output-field">
+                    <span class="field-label">Адрес:</span>
+                    <span class="field-value">${address}</span>
+                </div>
+                <div class="output-field">
+                    <span class="field-label">Координаты:</span>
+                    <span class="field-value">${object.lat}, ${object.lon}</span>
+                </div>
+            </div>
         `;
 
-        document.body.appendChild(notification);
-
-        setTimeout(() => {
-            notification.style.transform = 'translateX(-50%) translateY(0)';
-        }, 100);
-
-        setTimeout(() => {
-            notification.style.transform = 'translateX(-50%) translateY(100%)';
-            setTimeout(() => {
-                if (notification.parentNode) {
-                    notification.parentNode.removeChild(notification);
-                }
-            }, 300);
-        }, 3000);
+        return outputBox;
     }
-}
-
-// Инициализация приложения
-document.addEventListener('DOMContentLoaded', () => {
-    new AddressSearch();
 });
