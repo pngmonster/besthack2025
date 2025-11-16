@@ -3,7 +3,7 @@ import numpy as np
 import re
 from rapidfuzz import fuzz
 
-# Словарь для замены сокращений
+# Нормализация улиц
 street_types = {
     r'\bул\.?\b': 'улица',
     r'\bпер\.?\b': 'переулок',
@@ -38,33 +38,39 @@ def format_full_address(city, street, house, building='', structure=''):
         parts.append(structure)
     return ', '.join(parts[:2]) + ', ' + ' '.join(parts[2:])
 
-def search_address_single(csv_path, query, top_n=3):
-    df = pd.read_csv(csv_path, sep=';')
-
+def search_address_single(df, query, top_n=3):
     # Нормализация запроса
     query_norm = query.strip()
     if not query_norm.lower().startswith("москва"):
         query_norm = "Москва, " + query_norm
 
-    # Выделяем номер дома из запроса
-    house_match = re.search(r'\d+[а-яА-ЯкК]*', query_norm)
-    query_house = house_match.group(0) if house_match else ""
+    # Разбор на улицу и номер дома
+    match = re.search(r'\d+[а-яА-ЯкК]*', query_norm)
+    query_house = match.group(0) if match else ""
     street_query = re.sub(r'\d+[а-яА-ЯкК]*', '', query_norm).replace("Москва,", "").strip().lower()
 
-    # Векторизация улиц
-    streets = df['street'].apply(normalize_street_name).str.lower().str.strip().to_numpy()
-    query_street_np = np.array([street_query] * len(streets))
+    # Нормализация всех улиц
+    df['street_norm'] = df['street'].apply(normalize_street_name).str.lower().str.strip()
 
-    # Векторизованный fuzzy matching через numpy
-    vectorized_score = np.vectorize(fuzz.WRatio)(query_street_np, streets)
+    # Быстро отбираем кандидатов по подстроке (первые 3 символа запроса)
+    prefix = street_query[:3]
+    candidates = df[df['street_norm'].str.contains(prefix)]
 
-    # Выбор top-N индексов по убыванию
+    # Если слишком мало кандидатов, берём весь df
+    if len(candidates) < 50:
+        candidates = df
+
+    # Векторизация fuzzy score через NumPy
+    streets_np = candidates['street_norm'].to_numpy()
+    query_np = np.array([street_query] * len(streets_np))
+    vectorized_score = np.vectorize(fuzz.WRatio)(query_np, streets_np)
+
     top_idx = np.argsort(vectorized_score)[::-1][:top_n]
-
     results = []
-    for idx in top_idx:
-        row = df.iloc[idx]
-        street_score = vectorized_score[idx] / 100
+    for i in top_idx:
+        row = candidates.iloc[i]
+        street_score = vectorized_score[i] / 100
+
         # Проверка номера дома
         number_score = 1.0
         if query_house:
@@ -72,6 +78,7 @@ def search_address_single(csv_path, query, top_n=3):
                 number_score = 1.0
             else:
                 number_score = 0.5
+
         final_score = (street_score + number_score) / 2
 
         full_address = format_full_address(
