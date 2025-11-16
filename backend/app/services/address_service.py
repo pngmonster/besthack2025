@@ -68,12 +68,13 @@ class AddressService:
     async def save(self, addresses: List[AddressCreate]):
         ids = []
         texts = []
+        embedding = []
         for address in addresses:
             addressDB = await self.address_repo.create(address)
             ids.append(str(addressDB.id))
-            texts.append("г. Москва "+addressDB.localy+" "+addressDB.street+ " " + addressDB.number)
-
-        await self.chroma_repo.add(ids, texts)
+            texts.append(addressDB.localy+" "+addressDB.street+ " " + addressDB.number)
+            embedding.append(address.embedding)
+        await self.chroma_repo.add(ids, texts, embedding)
 
     async def search(self, search_name: str, n_results=5):
         ids, distance = await self.chroma_repo.query(search_name, n_results)

@@ -7,8 +7,8 @@ class ChromaRepository:
     def __init__(self, collection: chromadb.Collection):
         self.collection = collection
 
-    async def add(self, ids: List[str], texts: List[str]):
-        self.collection.add(ids=ids, documents=texts)
+    async def add(self, ids: List[str], texts: List[str], embedding: List[float]):
+        self.collection.add(ids=ids, documents=texts, embeddings=embedding)
 
     async def query(self, search_address: str, n_results: int):
         result = self.collection.query(

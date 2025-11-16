@@ -5,5 +5,4 @@ pydantic_settings
 chromadb
 structlog
 asyncpg
-sentence_transformers
 python-Levenshtein

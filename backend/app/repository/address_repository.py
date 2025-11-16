@@ -24,7 +24,14 @@ class AddressRepository:
 
     async def create(self, address_create: AddressCreate) -> Address:
         try:
-            addressModel = AddressModel(**address_create.model_dump())
+            addressModel = AddressModel(
+                node_id=address_create.node_id,
+                localy=address_create.localy,
+                street=address_create.street,
+                number=address_create.number,
+                lat=address_create.lat,
+                lon=address_create.lon
+            )
             self.session.add(addressModel)
             await self.session.commit()
             await self.session.refresh(addressModel)

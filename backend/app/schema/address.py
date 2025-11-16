@@ -20,6 +20,7 @@ class AddressCreate(BaseModel):
     number: str
     lat: float
     lon: float
+    embedding: List[float]
 
     model_config = {"from_attributes": True}
 
