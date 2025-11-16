@@ -12,7 +12,7 @@ router = APIRouter(prefix="/search", tags=["search"])
 @router.get("", response_model=SearchResponse)
 async def search(address: str):
     try:
-        res = search_address_single("addresses_full.csv", search, top_n=3)
+        res = search_address_single("addresses_full.csv", address, top_n=3)
         return json.dumps(res, ensure_ascii=False, indent=2)
 
     except Exception as e:
