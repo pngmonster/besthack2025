@@ -13,7 +13,7 @@ router = APIRouter(prefix="/search", tags=["search"])
 async def search(address: str):
     try:
         res = search_address_single("addresses_full.csv", address, top_n=3)
-        return json.dumps(res, ensure_ascii=False, indent=2)
+        return res
 
     except Exception as e:
         print("❌ Ошибка при сохранении:", e)
