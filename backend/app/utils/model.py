@@ -40,7 +40,7 @@ def format_full_address(city, street, house, building='', structure=''):
         parts.append(structure)
     return ', '.join(parts[:2]) + ', ' + ' '.join(parts[2:])
 
-def search_address_for_route(df, query, top_n=5):
+def search_address_single(df, query, top_n=5):
     """
     Поиск топ-N совпадений адреса.
     Возвращает Python-объект (dict), безопасный для расчёта маршрута.
