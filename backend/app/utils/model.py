@@ -4,10 +4,10 @@ import re
 from rapidfuzz import fuzz, process
 import functools
 
-# Кэшируем нормализацию
+# Кэшируем нормализацию (только для поиска)
 @functools.lru_cache(maxsize=10000)
 def normalize_street_name_cached(street_name):
-    """Кэшированная версия нормализации названий улиц"""
+    """Кэшированная версия нормализации названий улиц ТОЛЬКО для поиска"""
     if not street_name or pd.isna(street_name):
         return ""
 
@@ -47,7 +47,7 @@ def preprocess_dataframe(df):
     """Предобработка DataFrame для ускорения поиска"""
     df = df.copy()
 
-    # Предварительно нормализуем все улицы
+    # Предварительно нормализуем все улицы (только для поискового индекса)
     if 'street_normalized' not in df.columns:
         df['street_normalized'] = df['street'].apply(normalize_street_name_cached).str.lower().str.strip()
 
@@ -143,19 +143,19 @@ def search_address_single_levenshtein(csv_path, query, top_n=3):
             row['house']
         )
 
-        # Формируем полный адрес из оригинальных данных
+        # Формируем полный адрес из оригинальных данных БЕЗ ИЗМЕНЕНИЯ РЕГИСТРА
         full_address_parts = []
 
         # Город (всегда Москва)
         full_address_parts.append("Москва")
 
-        # Улица (оригинальное значение из DataFrame)
+        # Улица (оригинальное значение из DataFrame как есть)
         full_address_parts.append(str(row['street']))
 
-        # Дом (оригинальное значение из DataFrame)
+        # Дом (оригинальное значение из DataFrame как есть)
         full_address_parts.append(str(row['house']))
 
-        # Корпус/строение (оригинальные значения из DataFrame)
+        # Корпус/строение (оригинальные значения из DataFrame как есть)
         building = row.get('building', '')
         if building and not pd.isna(building) and str(building) != 'nan' and str(building) != '':
             full_address_parts.append(str(building))
@@ -169,9 +169,8 @@ def search_address_single_levenshtein(csv_path, query, top_n=3):
 
         results.append({
             "locality": "Москва",
-            "street": str(row['street']),  # Оригинальное название улицы
-            "number": str(row['house']),   # Оригинальный номер дома
-            "full_address": full_address,  # Адрес из оригильных данных
+            "street": str(row['street']),  # Оригинальное название улицы как в DataFrame
+            "number": str(row['house']),   # Оригинальный номер дома как в DataFrame
             "lon": float(row['@lon']),
             "lat": float(row['@lat']),
             "score": final_score,
