@@ -18,8 +18,10 @@ class ChromaRepository:
                search_address,
                convert_to_numpy=False,   # возвращает torch.Tensor
            )
+        emb_list = emb.tolist()
+
         result = self.collection.query(
-            query_embeddings=[emb],
+            query_embeddings=[emb_list],
             n_results=n_results,
         )
         ids = result["ids"][0]
