@@ -5,3 +5,5 @@ pydantic_settings
 structlog
 python-Levenshtein
 rapidfuzz
+uvicorn
+pandas
