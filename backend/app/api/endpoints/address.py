@@ -1,10 +1,8 @@
-from fastapi import APIRouter, Depends
-from fastapi.responses import Response, JSONResponse
+from fastapi import APIRouter
 from fastapi.exceptions import HTTPException
 from typing import List
-import json
 from app.utils.model import search_address_single_levenshtein
-from app.schema.address import AddressCreate, SearchResponse
+from app.schema.address import SearchResponse
 
 
 router = APIRouter(prefix="/search", tags=["search"])
